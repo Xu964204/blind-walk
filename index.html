@@ -6,125 +6,70 @@
 <title>见 · 一段盲道</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   html, body {
-    width: 100%; height: 100%;
-    background: #000;
-    overflow: hidden;
-    /* 修复：不再隐藏鼠标 */
+    width: 100%; height: 100%; background: #000; overflow: hidden;
     font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-    touch-action: none;
-    -webkit-user-select: none;
-    user-select: none;
+    touch-action: none; -webkit-user-select: none; user-select: none;
   }
+  canvas { position: fixed; top: 0; left: 0; display: block; pointer-events: none; }
 
-  canvas { 
-    position: fixed; 
-    top: 0; left: 0; 
-    display: block; 
-    /* 修复：让鼠标事件穿透画布，防止挡住按钮 */
-    pointer-events: none;
-  }
-
-  /* 修复：新增开始界面遮罩层 */
   #startScreen {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    cursor: pointer;
-    color: rgba(255,255,255,0.5);
-    font-size: 14px;
-    letter-spacing: 3px;
-    transition: opacity 0.8s ease;
+    position: fixed; inset: 0; background: #000;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; cursor: pointer; transition: opacity 1s ease;
   }
+  #startScreen .title {
+    font-size: 32px; font-weight: 300; letter-spacing: 16px;
+    color: #f5c842; margin-bottom: 60px; text-indent: 16px; text-align: center;
+  }
+  #startScreen .btn { font-size: 13px; letter-spacing: 4px; color: rgba(255,255,255,0.5); text-align: center; }
+  #startScreen .sub { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.2); margin-top: 20px; text-align: center; }
 
   #hint {
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: rgba(255,255,255,0.25);
-    font-size: 13px;
-    letter-spacing: 3px;
-    white-space: nowrap;
-    transition: opacity 1.2s;
-    pointer-events: none;
-    z-index: 10;
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.2); font-size: 12px; letter-spacing: 3px;
+    white-space: nowrap; transition: opacity 1.5s; pointer-events: none; z-index: 10;
   }
 
   #ending {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 40px;
-    background: rgba(0,0,0,0);
-    opacity: 0;
-    transition: opacity 1.6s ease, background 1.6s ease;
-    pointer-events: none;
-    z-index: 20;
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 40px; background: rgba(0,0,0,0); opacity: 0;
+    transition: opacity 1.8s ease, background 1.8s ease;
+    pointer-events: none; z-index: 20;
   }
-
-  #ending.show {
-    opacity: 1;
-    background: rgba(0,0,0,0.88);
-    pointer-events: auto;
-  }
-
+  #ending.show { opacity: 1; background: rgba(0,0,0,0.92); pointer-events: auto; }
   #ending .title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #f5c842;
-    letter-spacing: 8px;
-    margin-bottom: 28px;
-    text-indent: 8px;
+    font-size: 18px; font-weight: 500; color: #f5c842;
+    letter-spacing: 10px; margin-bottom: 36px; text-indent: 10px;
   }
-
   #ending .text {
-    font-size: 15px;
-    line-height: 2.3;
-    color: rgba(255,255,255,0.55);
-    letter-spacing: 1px;
-    max-width: 440px;
-    white-space: pre-line;
+    font-size: 14px; line-height: 2.4; color: rgba(255,255,255,0.5);
+    letter-spacing: 1.5px; max-width: 420px; white-space: pre-line;
   }
-
   #ending .restart {
-    margin-top: 48px;
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.3);
-    padding: 10px 32px;
-    border-radius: 30px;
-    font-size: 12px;
-    letter-spacing: 4px;
-    cursor: pointer;
-    transition: all 0.4s;
-    font-family: inherit;
-    text-indent: 4px;
-    pointer-events: auto; /* 确保按钮可点击 */
+    margin-top: 52px; background: transparent;
+    border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.25);
+    padding: 11px 36px; border-radius: 30px; font-size: 11px;
+    letter-spacing: 5px; cursor: pointer; transition: all 0.5s;
+    font-family: inherit; text-indent: 5px;
   }
-
-  #ending .restart:hover {
-    color: rgba(255,255,255,0.8);
-    border-color: rgba(255,255,255,0.4);
-  }
+  #ending .restart:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.35); }
 </style>
 </head>
 <body>
 
-<!-- 修复：新增开始屏幕 -->
-<div id="startScreen">点击屏幕 · 开始体验</div>
+<div id="startScreen">
+  <div>
+    <div class="title">见</div>
+    <div class="btn">点击屏幕 · 开始体验</div>
+    <div class="sub">移动鼠标 · 用盲杖感知前方</div>
+  </div>
+</div>
 
 <canvas id="c"></canvas>
-<div id="hint">移动 · 感知黑暗</div>
+<div id="hint">沿盲道前行 · 用盲杖感知</div>
+
 <div id="ending">
   <div class="title">一段盲道</div>
   <div class="text" id="endingText"></div>
@@ -143,23 +88,21 @@
   var startScreen = document.getElementById('startScreen');
 
   var W, H, DPR;
-
-  // ========== 状态 ==========
   var startTime = 0;
   var mouseX = 0, mouseY = 0;
   var started = false;
   var finished = false;
   var audioCtx = null;
 
-  var DURATION = 20000;
-  var REVEAL_START = 0.80;
-  var REVEAL_DUR = 0.12;
-  var SENSE_RADIUS = 110;
+  var DURATION = 30000;         // 30 秒
+  var REVEAL_START = 0.88;      // 最后约 3.6 秒开始整体揭晓
+  var REVEAL_DUR = 0.10;
+  var SENSE_RADIUS = 130;       // 感知半径（用于检测接触）
+  var CLIP_RADIUS = 85;         // 视觉揭示半径（只显示盲杖尖端附近）
 
   var tactileNodes = [];
   var obstacles = [];
 
-  // ========== 工具 ==========
   function lerp(a, b, t) { return a + (b - a) * t; }
   function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
   function smoothstep(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
@@ -167,65 +110,112 @@
   // ========== 音频 ==========
   function initAudio() {
     if (audioCtx) return;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
+
+  function playTone(freq, type, vol, dur, delay) {
+    if (!audioCtx) return;
     try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var t0 = audioCtx.currentTime + (delay || 0);
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + dur);
     } catch (e) {}
   }
 
-  function playClick(freq, vol, dur) {
+  // 不同障碍物：不同声音
+  function playObstacleSound(type) {
     if (!audioCtx) return;
-    try {
-      var o = audioCtx.createOscillator();
-      var g = audioCtx.createGain();
-      o.type = 'sine';
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(vol, audioCtx.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
-      o.connect(g);
-      g.connect(audioCtx.destination);
-      o.start();
-      o.stop(audioCtx.currentTime + dur);
-    } catch (e) {}
+    switch (type) {
+      case 'tree':
+        // 树木：沉闷的木质敲击
+        playTone(140, 'sine', 0.10, 0.22, 0);
+        playTone(210, 'sine', 0.05, 0.15, 0.02);
+        break;
+      case 'pole':
+        // 电线杆：金属清脆的敲击声
+        playTone(1100, 'triangle', 0.055, 0.13, 0);
+        playTone(1700, 'triangle', 0.03, 0.09, 0.01);
+        break;
+      case 'bike':
+        // 自行车：金属轻微的触碰声
+        playTone(720, 'square', 0.035, 0.07, 0);
+        playTone(980, 'square', 0.022, 0.10, 0.04);
+        break;
+      case 'car':
+        // 汽车：沉闷厚重
+        playTone(75, 'sine', 0.13, 0.38, 0);
+        playTone(150, 'sine', 0.05, 0.28, 0.02);
+        break;
+      case 'trash':
+        // 垃圾桶：空腔金属碰撞
+        playTone(320, 'triangle', 0.075, 0.18, 0);
+        playTone(520, 'triangle', 0.04, 0.13, 0.03);
+        break;
+      case 'hydrant':
+        // 消防栓：铁质沉闷
+        playTone(180, 'sine', 0.10, 0.24, 0);
+        playTone(260, 'sine', 0.04, 0.15, 0.02);
+        break;
+    }
   }
 
   // ========== 路径 ==========
   function pathPoint(t) {
-    var x = W * 0.5 + Math.sin(t * Math.PI * 1.4 + 0.3) * W * 0.085;
+    var x = W * 0.5 + Math.sin(t * Math.PI * 1.4 + 0.3) * W * 0.13;
     var y = H * 1.05 - t * H * 1.05;
     return { x: x, y: y };
   }
 
-  // ========== 场景构建 ==========
+  // ========== 场景 ==========
   function buildScene() {
     tactileNodes = [];
     obstacles = [];
 
-    var nodeCount = 90;
+    // 盲道节点（更密更宽）
+    var nodeCount = 150;
     for (var i = 0; i < nodeCount; i++) {
       var t = i / (nodeCount - 1);
       var p = pathPoint(t);
       tactileNodes.push({ x: p.x, y: p.y, alpha: 0 });
     }
 
-    var sc = clamp(W / 500, 0.7, 1.4);
+    // 缩放系数（比之前大 1.5 倍）
+    var baseSize = Math.min(W, H) / 550;
+    baseSize = clamp(baseSize, 0.85, 2.2);
 
-    var treeP = pathPoint(0.28);
-    obstacles.push({ type: 'tree', x: treeP.x - W * 0.16, y: treeP.y, scale: sc, alpha: 0, discovered: false });
+    // 6 种障碍物分布在 30 秒的路径上
+    var layout = [
+      { type: 'tree',    t: 0.12, offsetX: -W * 0.15 },
+      { type: 'pole',    t: 0.22, offsetX:  W * 0.11 },
+      { type: 'bike',    t: 0.33, offsetX:  W * 0.01 },
+      { type: 'trash',   t: 0.44, offsetX: -W * 0.08 },
+      { type: 'car',     t: 0.55, offsetX:  W * 0.13 },
+      { type: 'hydrant', t: 0.66, offsetX:  W * 0.05 },
+      { type: 'bike',    t: 0.76, offsetX: -W * 0.05 },
+      { type: 'tree',    t: 0.86, offsetX:  W * 0.11 },
+      { type: 'pole',    t: 0.94, offsetX: -W * 0.10 }
+    ];
 
-    var poleP = pathPoint(0.45);
-    obstacles.push({ type: 'pole', x: poleP.x + W * 0.13, y: poleP.y + 40, scale: sc, alpha: 0, discovered: false });
-
-    var bikeP = pathPoint(0.58);
-    obstacles.push({ type: 'bike', x: bikeP.x, y: bikeP.y, scale: sc * 1.1, alpha: 0, discovered: false, rotate: 0 });
-
-    var carP = pathPoint(0.75);
-    obstacles.push({ type: 'car', x: carP.x + W * 0.18, y: carP.y + 20, scale: sc, alpha: 0, discovered: false });
-
-    var bike2P = pathPoint(0.78);
-    obstacles.push({ type: 'bike', x: bike2P.x + W * 0.04, y: bike2P.y - 10, scale: sc * 0.95, alpha: 0, discovered: false, rotate: -0.55 });
+    for (var j = 0; j < layout.length; j++) {
+      var it = layout[j];
+      var pp = pathPoint(it.t);
+      obstacles.push({
+        type: it.type,
+        x: pp.x + it.offsetX,
+        y: pp.y,
+        scale: baseSize,
+        alpha: 0,
+        lastSoundTime: -9999
+      });
+    }
   }
 
-  // ========== 尺寸 ==========
   function resize() {
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth;
@@ -240,94 +230,226 @@
 
     if (!started) {
       mouseX = W * 0.5;
-      mouseY = H * 0.85;
+      mouseY = H * 0.72;
     }
   }
 
-  // ========== 绘制工具 ==========
-  function setStroke(alpha) {
+  // ========== 绘制辅助 ==========
+  function setStroke(alpha, color) {
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = '#f5c842';
+    ctx.strokeStyle = color || '#ffffff';
     ctx.lineWidth = 1.6;
-    ctx.setLineDash([2.5, 4.5]);
+    ctx.setLineDash([]);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
   }
 
-  // ========== 障碍物绘制 ==========
+  // ========== 6 种障碍物绘制（全部白色） ==========
   function drawTree(x, y, s, a) {
-    if (a < 0.01) return;
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a);
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -70); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, -105, 42, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(-15, -115, 22, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(15, -100, 25, 0, Math.PI * 2); ctx.stroke();
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a, '#ffffff');
+    // 树干
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -60); ctx.stroke();
+    // 树冠
+    ctx.beginPath(); ctx.arc(0, -90, 38, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-19, -100, 23, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(19, -85, 25, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
 
   function drawPole(x, y, s, a) {
-    if (a < 0.01) return;
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a);
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a, '#ffffff');
+    // 主杆
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -150); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-30, -140); ctx.lineTo(30, -140); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-20, -150); ctx.lineTo(-20, -135); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(20, -150); ctx.lineTo(20, -135); ctx.stroke();
+    // 顶部横杆
+    ctx.beginPath(); ctx.moveTo(-28, -140); ctx.lineTo(28, -140); ctx.stroke();
+    // 悬挂线
+    ctx.beginPath(); ctx.moveTo(-20, -150); ctx.lineTo(-20, -128); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(20, -150); ctx.lineTo(20, -128); ctx.stroke();
     ctx.restore();
   }
 
-  function drawBike(x, y, s, a, rot) {
-    if (a < 0.01) return;
-    ctx.save(); ctx.translate(x, y); if (rot) ctx.rotate(rot); ctx.scale(s, s); setStroke(a);
-    ctx.beginPath(); ctx.arc(-38, 0, 20, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(38, 0, 20, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-38, 0); ctx.lineTo(-15, -25); ctx.lineTo(25, -25); ctx.lineTo(38, 0);
-    ctx.moveTo(-15, -25); ctx.lineTo(12, 0); ctx.lineTo(-38, 0); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(25, -25); ctx.lineTo(33, -38); ctx.lineTo(46, -38); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-15, -25); ctx.lineTo(-22, -34); ctx.lineTo(-32, -34); ctx.stroke();
+  function drawBike(x, y, s, a) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a, '#ffffff');
+    // 车轮
+    ctx.beginPath(); ctx.arc(-34, 0, 18, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(34, 0, 18, 0, Math.PI * 2); ctx.stroke();
+    // 车架
+    ctx.beginPath();
+    ctx.moveTo(-34, 0); ctx.lineTo(-13, -21); ctx.lineTo(21, -21);
+    ctx.lineTo(34, 0); ctx.moveTo(-13, -21); ctx.lineTo(9, 0); ctx.lineTo(-34, 0);
+    ctx.stroke();
+    // 车把
+    ctx.beginPath(); ctx.moveTo(21, -21); ctx.lineTo(29, -34); ctx.lineTo(40, -34); ctx.stroke();
+    // 车座
+    ctx.beginPath(); ctx.moveTo(-13, -21); ctx.lineTo(-19, -30); ctx.lineTo(-28, -30); ctx.stroke();
     ctx.restore();
   }
 
   function drawCar(x, y, s, a) {
-    if (a < 0.01) return;
-    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a);
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a, '#ffffff');
+    // 车身
     ctx.beginPath();
-    ctx.moveTo(-70, 0); ctx.lineTo(-70, -28); ctx.lineTo(-45, -28);
-    ctx.lineTo(-30, -55); ctx.lineTo(25, -55); ctx.lineTo(40, -28);
-    ctx.lineTo(70, -28); ctx.lineTo(70, 0); ctx.closePath(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-25, -32); ctx.lineTo(-25, -50); ctx.lineTo(20, -50); ctx.lineTo(33, -32); ctx.closePath(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(-45, 0, 13, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(45, 0, 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.moveTo(-62, 0); ctx.lineTo(-62, -23); ctx.lineTo(-40, -23);
+    ctx.lineTo(-25, -50); ctx.lineTo(23, -50); ctx.lineTo(38, -23);
+    ctx.lineTo(62, -23); ctx.lineTo(62, 0); ctx.closePath(); ctx.stroke();
+    // 车窗
+    ctx.beginPath();
+    ctx.moveTo(-21, -27); ctx.lineTo(-21, -46); ctx.lineTo(17, -46);
+    ctx.lineTo(30, -27); ctx.closePath(); ctx.stroke();
+    // 车轮
+    ctx.beginPath(); ctx.arc(-40, 0, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(40, 0, 12, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
 
+  function drawTrash(x, y, s, a) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a, '#ffffff');
+    // 桶身
+    ctx.beginPath();
+    ctx.moveTo(-19, 0); ctx.lineTo(-21, -58); ctx.lineTo(21, -58);
+    ctx.lineTo(19, 0); ctx.closePath(); ctx.stroke();
+    // 桶盖
+    ctx.beginPath(); ctx.moveTo(-25, -58); ctx.lineTo(25, -58); ctx.stroke();
+    // 提手
+    ctx.beginPath(); ctx.arc(0, -62, 7, Math.PI, 0); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHydrant(x, y, s, a) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s); setStroke(a, '#ffffff');
+    // 主体
+    ctx.beginPath();
+    ctx.moveTo(-13, 0); ctx.lineTo(-13, -42); ctx.lineTo(-16, -52);
+    ctx.lineTo(16, -52); ctx.lineTo(13, -42); ctx.lineTo(13, 0);
+    ctx.stroke();
+    // 顶部
+    ctx.beginPath();
+    ctx.moveTo(-9, -52); ctx.lineTo(-5, -60); ctx.lineTo(5, -60); ctx.lineTo(9, -52);
+    ctx.stroke();
+    // 侧接口
+    ctx.beginPath(); ctx.moveTo(-13, -32); ctx.lineTo(-21, -32); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(13, -32); ctx.lineTo(21, -32); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawObstacle(o, alphaOverride) {
+    var a = (alphaOverride !== undefined) ? alphaOverride : o.alpha;
+    if (a < 0.01) return;
+    switch (o.type) {
+      case 'tree':    drawTree(o.x, o.y, o.scale, a); break;
+      case 'pole':    drawPole(o.x, o.y, o.scale, a); break;
+      case 'bike':    drawBike(o.x, o.y, o.scale, a); break;
+      case 'car':     drawCar(o.x, o.y, o.scale, a); break;
+      case 'trash':   drawTrash(o.x, o.y, o.scale, a); break;
+      case 'hydrant': drawHydrant(o.x, o.y, o.scale, a); break;
+    }
+  }
+
   // ========== 感知更新 ==========
-  function updatePerception() {
+  function updatePerception(currentTime) {
     var cx = mouseX, cy = mouseY;
     var R = SENSE_RADIUS;
 
+    // 盲道
     for (var i = 0; i < tactileNodes.length; i++) {
       var n = tactileNodes[i];
-      var dx = cx - n.x;
-      var dy = cy - n.y;
+      var dx = cx - n.x, dy = cy - n.y;
       var d = Math.sqrt(dx * dx + dy * dy);
       var target = d < R ? (1 - d / R) * 0.9 : 0;
-      if (target > n.alpha) { n.alpha = lerp(n.alpha, target, 0.25); } 
-      else { n.alpha *= 0.995; }
+      if (target > n.alpha) n.alpha = lerp(n.alpha, target, 0.3);
+      else n.alpha *= 0.992;
     }
 
+    // 障碍物：接触判定 + 音效（节流）
     for (var j = 0; j < obstacles.length; j++) {
       var o = obstacles[j];
-      var ox = cx - o.x;
-      var oy = cy - o.y;
+      var ox = cx - o.x, oy = cy - o.y;
       var od = Math.sqrt(ox * ox + oy * oy);
-      var otarget = od < R * 1.4 ? (1 - od / (R * 1.4)) : 0;
-      if (otarget > o.alpha) { o.alpha = lerp(o.alpha, otarget, 0.18); } 
-      else { o.alpha *= 0.996; }
-      if (!o.discovered && o.alpha > 0.35) {
-        o.discovered = true;
-        playClick(300 + Math.random() * 100, 0.028, 0.16);
+      var reach = R * 1.35;
+      var otarget = od < reach ? (1 - od / reach) : 0;
+
+      if (otarget > o.alpha) o.alpha = lerp(o.alpha, otarget, 0.22);
+      else o.alpha *= 0.99;
+
+      if (otarget > 0.45 && currentTime - o.lastSoundTime > 900) {
+        o.lastSoundTime = currentTime;
+        playObstacleSound(o.type);
       }
     }
+  }
+
+  // ========== 盲杖绘制 ==========
+  function drawCane(tipX, tipY, time) {
+    // 轻微摆动
+    var sway = Math.sin(time / 620) * 0.045;
+    var angle = -Math.PI / 3.5 + sway;
+    var length = 190;
+    var handX = tipX + Math.cos(angle) * length;
+    var handY = tipY + Math.sin(angle) * length;
+
+    // 杖尖光晕
+    var glowGrad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 45);
+    glowGrad.addColorStop(0, 'rgba(245, 200, 66, 0.28)');
+    glowGrad.addColorStop(0.45, 'rgba(245, 200, 66, 0.07)');
+    glowGrad.addColorStop(1, 'rgba(245, 200, 66, 0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath(); ctx.arc(tipX, tipY, 45, 0, Math.PI * 2); ctx.fill();
+
+    // 杖身渐变
+    var grad = ctx.createLinearGradient(tipX, tipY, handX, handY);
+    grad.addColorStop(0, 'rgba(245, 200, 66, 0.95)');
+    grad.addColorStop(0.55, 'rgba(220, 180, 80, 0.9)');
+    grad.addColorStop(1, 'rgba(140, 108, 48, 0.85)');
+
+    ctx.save();
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 4.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(handX, handY); ctx.stroke();
+    ctx.restore();
+
+    // 杖尖
+    ctx.save();
+    ctx.fillStyle = '#f5c842';
+    ctx.shadowColor = '#f5c842';
+    ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(tipX, tipY, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // 握把
+    ctx.save();
+    ctx.fillStyle = 'rgba(100, 75, 45, 0.92)';
+    ctx.beginPath(); ctx.arc(handX, handY, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ========== 方向指示器 ==========
+  function drawDirectionIndicators() {
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = '#f5c842';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    var positions = [0.06, 0.17, 0.28, 0.39, 0.50, 0.61, 0.72, 0.83, 0.94];
+    for (var i = 0; i < positions.length; i++) {
+      var t = positions[i];
+      var p1 = pathPoint(t);
+      var p2 = pathPoint(Math.min(t + 0.015, 1));
+      var angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      ctx.save();
+      ctx.translate(p1.x, p1.y);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(-6, -6);
+      ctx.lineTo(4, 0);
+      ctx.lineTo(-6, 6);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   // ========== 主渲染 ==========
@@ -336,74 +458,69 @@
     var elapsed = ts - startTime;
     var t = clamp(elapsed / DURATION, 0, 1);
 
+    // 清屏
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
 
-    updatePerception();
+    updatePerception(ts);
 
     var revealT = clamp((t - REVEAL_START) / REVEAL_DUR, 0, 1);
     var revealAlpha = smoothstep(revealT);
 
-    if (!finished) {
-      var pulse = 0.5 + 0.5 * Math.sin(elapsed / 400);
-      var glow = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, SENSE_RADIUS);
-      glow.addColorStop(0, 'rgba(245,200,66,' + (0.035 + pulse * 0.012) + ')');
-      glow.addColorStop(0.5, 'rgba(245,200,66,0.012)');
-      glow.addColorStop(1, 'rgba(245,200,66,0)');
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, W, H);
-    }
+    // ---- 方向指示器（底层） ----
+    if (!finished) drawDirectionIndicators();
 
+    // ---- 盲道 ----
     for (var i = 0; i < tactileNodes.length; i++) {
       var n = tactileNodes[i];
-      var a = Math.max(n.alpha, revealAlpha * 0.8);
+      var a = Math.max(n.alpha, revealAlpha * 0.75);
       if (a < 0.015) continue;
 
-      ctx.globalAlpha = a * 0.85;
+      ctx.globalAlpha = a * 0.9;
       ctx.fillStyle = '#e6b93a';
 
-      var sz = 1.8;
+      var sz = 2;
       ctx.beginPath(); ctx.arc(n.x, n.y, sz, 0, Math.PI * 2); ctx.fill();
 
       if (i < tactileNodes.length - 1) {
         var next = tactileNodes[i + 1];
-        var ddx = next.x - n.x;
-        var ddy = next.y - n.y;
+        var ddx = next.x - n.x, ddy = next.y - n.y;
         var len = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
-        var px = -ddy / len;
-        var py = ddx / len;
-        var off = 6;
-
+        var px = -ddy / len, py = ddx / len;
+        var off = 5;
         ctx.beginPath(); ctx.arc(n.x + px * off, n.y + py * off, sz, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(n.x - px * off, n.y - py * off, sz, 0, Math.PI * 2); ctx.fill();
       }
     }
+    ctx.globalAlpha = 1;
 
+    // ---- 障碍物 ----
+    // 原则：进行中时只用裁剪揭示局部；揭晓阶段才整体显现
     for (var k = 0; k < obstacles.length; k++) {
       var o = obstacles[k];
-      var oa = Math.max(o.alpha, revealAlpha);
-      if (oa < 0.01) continue;
+      var finalAlpha = Math.max(o.alpha, revealAlpha * 0.85);
+      if (finalAlpha < 0.01) continue;
 
-      if (o.type === 'tree') drawTree(o.x, o.y, o.scale, oa);
-      else if (o.type === 'pole') drawPole(o.x, o.y, o.scale, oa);
-      else if (o.type === 'bike') drawBike(o.x, o.y, o.scale, oa, o.rotate || 0);
-      else if (o.type === 'car') drawCar(o.x, o.y, o.scale, oa);
+      if (revealAlpha > 0.25 || finished) {
+        // 揭晓：整体显示
+        drawObstacle(o, finalAlpha);
+      } else {
+        // 进行中：只揭示盲杖尖端附近
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, CLIP_RADIUS, 0, Math.PI * 2);
+        ctx.clip();
+        drawObstacle(o, o.alpha);
+        ctx.restore();
+      }
     }
 
-    if (!finished) {
-      var p2 = 0.5 + 0.5 * Math.sin(elapsed / 300);
-      ctx.globalAlpha = 0.35 + p2 * 0.2;
-      ctx.fillStyle = '#f5c842';
-      ctx.beginPath(); ctx.arc(mouseX, mouseY, 2.5, 0, Math.PI * 2); ctx.fill();
-      
-      ctx.globalAlpha = 0.1 + p2 * 0.05;
-      ctx.strokeStyle = '#f5c842';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(mouseX, mouseY, 12 + p2 * 6, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 1;
+    // ---- 盲杖 ----
+    if (!finished && started) {
+      drawCane(mouseX, mouseY, elapsed);
     }
 
+    // ---- 结束 ----
     if (t >= 1 && !finished) {
       finished = true;
       showEnding();
@@ -412,64 +529,53 @@
     if (t < 1) requestAnimationFrame(render);
   }
 
-  // ========== 结束画面 ==========
+  // ========== 结束 ==========
   function showEnding() {
+    document.body.style.cursor = 'default';
+
     endingTextEl.innerText =
-      '你走了 20 秒。\n' +
-      '黑暗中，你只能靠一根手杖\n' +
-      '一点点摸索出这个世界。\n\n' +
-      '而这是他们每天要走的路。';
+      '你走了 30 秒。\n' +
+      '在黑暗中，每一步\n' +
+      '都只能靠一根盲杖，\n' +
+      '一点点试探出前面的世界。\n\n' +
+      '而这是他们每天的路。';
 
     setTimeout(function() {
       endingEl.classList.add('show');
-      playClick(392, 0.035, 0.8);
-      setTimeout(function() { playClick(523, 0.025, 0.9); }, 300);
-    }, 400);
+      playTone(392, 'sine', 0.04, 0.9, 0);
+      playTone(523, 'sine', 0.03, 0.9, 0.35);
+      playTone(659, 'sine', 0.02, 1.2, 0.7);
+    }, 600);
   }
 
   // ========== 事件 ==========
   function onMove(x, y) {
-    mouseX = x;
-    mouseY = y;
-    if (!started) {
-      // 如果还没开始，忽略移动事件，避免干扰开始遮罩层
-      return; 
-    }
-    hintEl.style.opacity = '0';
+    mouseX = x; mouseY = y;
+    if (started) hintEl.style.opacity = '0';
   }
 
-  document.addEventListener('mousemove', function(e) {
-    onMove(e.clientX, e.clientY);
-  });
-
+  document.addEventListener('mousemove', function(e) { onMove(e.clientX, e.clientY); });
   document.addEventListener('touchstart', function(e) {
-    if (e.touches.length > 0) {
-      onMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
+    if (e.touches.length > 0) onMove(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: true });
-
   document.addEventListener('touchmove', function(e) {
     e.preventDefault();
-    if (e.touches.length > 0) {
-      onMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
+    if (e.touches.length > 0) onMove(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: false });
 
   window.addEventListener('resize', resize);
 
-  // ========== 新增：开始遮罩层点击逻辑 ==========
+  // ========== 启动 ==========
   function startExperience() {
     if (started) return;
     started = true;
     startScreen.style.opacity = '0';
-    setTimeout(function() {
-      startScreen.style.display = 'none';
-    }, 800);
-    
+    setTimeout(function() { startScreen.style.display = 'none'; }, 1000);
+
+    document.body.style.cursor = 'none'; // 隐藏鼠标，只显示盲杖
     initAudio();
-    playClick(440, 0.05, 0.2);
-    
-    // 重新开始计时
+    playTone(440, 'sine', 0.05, 0.3, 0);
+
     startTime = performance.now();
     requestAnimationFrame(render);
   }
@@ -480,13 +586,7 @@
     startExperience();
   }, { passive: false });
 
-  // ========== 启动 ==========
   resize();
-  
-  // 注意：这里不再立即调用 requestAnimationFrame(render)，
-  // 而是在 startExperience 被点击后才开始渲染，防止时间提前跑。
-  
-  // 自动隐藏底部提示
   setTimeout(function() { hintEl.style.opacity = '0'; }, 8000);
 
 })();
