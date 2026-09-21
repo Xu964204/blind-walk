@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>见 · 一段盲道</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    cursor: none;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  canvas { position: fixed; top: 0; left: 0; display: block; }
+
+  #hint {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.25);
+    font-size: 13px;
+    letter-spacing: 3px;
+    white-space: nowrap;
+    transition: opacity 1.2s;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #ending {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    background: rgba(0,0,0,0);
+    opacity: 0;
+    transition: opacity 1.6s ease, background 1.6s ease;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  #ending.show {
+    opacity: 1;
+    background: rgba(0,0,0,0.88);
+    pointer-events: auto;
+  }
+
+  #ending .title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #f5c842;
+    letter-spacing: 8px;
+    margin-bottom: 28px;
+    text-indent: 8px;
+  }
+
+  #ending .text {
+    font-size: 15px;
+    line-height: 2.3;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 1px;
+    max-width: 440px;
+    white-space: pre-line;
+  }
+
+  #ending .restart {
+    margin-top: 48px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.3);
+    padding: 10px 32px;
+    border-radius: 30px;
+    font-size: 12px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: all 0.4s;
+    font-family: inherit;
+    text-indent: 4px;
+  }
+
+  #ending .restart:hover {
+    color: rgba(255,255,255,0.8);
+    border-color: rgba(255,255,255,0.4);
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">移动 · 感知黑暗</div>
+<div id="ending">
+  <div class="title">一段盲道</div>
+  <div class="text" id="endingText"></div>
+  <button class="restart" onclick="location.reload()">再走一次</button>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var hintEl = document.getElementById('hint');
+  var endingEl = document.getElementById('ending');
+  var endingTextEl = document.getElementById('endingText');
+
+  var W, H, DPR;
+
+  // ========== 状态 ==========
+  var startTime = 0;
+  var mouseX = 0, mouseY = 0;
+  var started = false;
+  var finished = false;
+  var audioCtx = null;
+
+  var DURATION = 20000;        // 20 秒
+  var REVEAL_START = 0.80;     // 16 秒开始揭晓
+  var REVEAL_DUR = 0.12;       // 2.4 秒内完成
+  var SENSE_RADIUS = 110;      // 感知半径
+
+  var tactileNodes = [];
+  var obstacles = [];
+
+  // ========== 工具 ==========
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); }
+  function smoothstep(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+
+  // ========== 音频 ==========
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {}
+  }
+
+  function playClick(freq, vol, dur) {
+    if (!audioCtx) return;
+    try {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start();
+      o.stop(audioCtx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  // ========== 路径 ==========
+  // t: 0（底部）→ 1（顶部）
+  function pathPoint(t) {
+    var x = W * 0.5 + Math.sin(t * Math.PI * 1.4 + 0.3) * W * 0.085;
+    var y = H * 1.05 - t * H * 1.05;
+    return { x: x, y: y };
+  }
+
+  // ========== 场景构建 ==========
+  function buildScene() {
+    tactileNodes = [];
+    obstacles = [];
+
+    // 盲道节点（沿路径均匀分布）
+    var nodeCount = 90;
+    for (var i = 0; i < nodeCount; i++) {
+      var t = i / (nodeCount - 1);
+      var p = pathPoint(t);
+      tactileNodes.push({ x: p.x, y: p.y, alpha: 0 });
+    }
+
+    var sc = clamp(W / 500, 0.7, 1.4);
+
+    // 树（左侧，t=0.28）
+    var treeP = pathPoint(0.28);
+    obstacles.push({
+      type: 'tree',
+      x: treeP.x - W * 0.16,
+      y: treeP.y,
+      scale: sc, alpha: 0, discovered: false
+    });
+
+    // 电线杆（右侧，t=0.45）
+    var poleP = pathPoint(0.45);
+    obstacles.push({
+      type: 'pole',
+      x: poleP.x + W * 0.13,
+      y: poleP.y + 40,
+      scale: sc, alpha: 0, discovered: false
+    });
+
+    // 共享单车①（横在盲道上，t=0.58）
+    var bikeP = pathPoint(0.58);
+    obstacles.push({
+      type: 'bike',
+      x: bikeP.x,
+      y: bikeP.y,
+      scale: sc * 1.1, alpha: 0, discovered: false, rotate: 0
+    });
+
+    // 汽车（右侧路边，t=0.75）
+    var carP = pathPoint(0.75);
+    obstacles.push({
+      type: 'car',
+      x: carP.x + W * 0.18,
+      y: carP.y + 20,
+      scale: sc, alpha: 0, discovered: false
+    });
+
+    // 共享单车②（倒在盲道上，t=0.78）
+    var bike2P = pathPoint(0.78);
+    obstacles.push({
+      type: 'bike',
+      x: bike2P.x + W * 0.04,
+      y: bike2P.y - 10,
+      scale: sc * 0.95, alpha: 0, discovered: false, rotate: -0.55
+    });
+  }
+
+  // ========== 尺寸 ==========
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    buildScene();
+
+    if (!started) {
+      mouseX = W * 0.5;
+      mouseY = H * 0.85;
+    }
+  }
+
+  // ========== 绘制工具 ==========
+  function setStroke(alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#f5c842';
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([2.5, 4.5]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+
+  // ========== 障碍物绘制 ==========
+  function drawTree(x, y, s, a) {
+    if (a < 0.01) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    setStroke(a);
+
+    // 树干
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -70);
+    ctx.stroke();
+
+    // 树冠
+    ctx.beginPath();
+    ctx.arc(0, -105, 42, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(-15, -115, 22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(15, -100, 25, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawPole(x, y, s, a) {
+    if (a < 0.01) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    setStroke(a);
+
+    // 主干
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, -150);
+    ctx.stroke();
+
+    // 顶部横杆
+    ctx.beginPath();
+    ctx.moveTo(-30, -140);
+    ctx.lineTo(30, -140);
+    ctx.stroke();
+
+    // 细节
+    ctx.beginPath();
+    ctx.moveTo(-20, -150);
+    ctx.lineTo(-20, -135);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(20, -150);
+    ctx.lineTo(20, -135);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawBike(x, y, s, a, rot) {
+    if (a < 0.01) return;
+    ctx.save();
+    ctx.translate(x, y);
+    if (rot) ctx.rotate(rot);
+    ctx.scale(s, s);
+    setStroke(a);
+
+    // 后轮
+    ctx.beginPath();
+    ctx.arc(-38, 0, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 前轮
+    ctx.beginPath();
+    ctx.arc(38, 0, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 车架
+    ctx.beginPath();
+    ctx.moveTo(-38, 0);
+    ctx.lineTo(-15, -25);
+    ctx.lineTo(25, -25);
+    ctx.lineTo(38, 0);
+    ctx.moveTo(-15, -25);
+    ctx.lineTo(12, 0);
+    ctx.lineTo(-38, 0);
+    ctx.stroke();
+
+    // 车把
+    ctx.beginPath();
+    ctx.moveTo(25, -25);
+    ctx.lineTo(33, -38);
+    ctx.lineTo(46, -38);
+    ctx.stroke();
+
+    // 车座
+    ctx.beginPath();
+    ctx.moveTo(-15, -25);
+    ctx.lineTo(-22, -34);
+    ctx.lineTo(-32, -34);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawCar(x, y, s, a) {
+    if (a < 0.01) return;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    setStroke(a);
+
+    // 车身
+    ctx.beginPath();
+    ctx.moveTo(-70, 0);
+    ctx.lineTo(-70, -28);
+    ctx.lineTo(-45, -28);
+    ctx.lineTo(-30, -55);
+    ctx.lineTo(25, -55);
+    ctx.lineTo(40, -28);
+    ctx.lineTo(70, -28);
+    ctx.lineTo(70, 0);
+    ctx.closePath();
+    ctx.stroke();
+
+    // 车窗
+    ctx.beginPath();
+    ctx.moveTo(-25, -32);
+    ctx.lineTo(-25, -50);
+    ctx.lineTo(20, -50);
+    ctx.lineTo(33, -32);
+    ctx.closePath();
+    ctx.stroke();
+
+    // 车轮
+    ctx.beginPath();
+    ctx.arc(-45, 0, 13, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(45, 0, 13, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ========== 感知更新 ==========
+  function updatePerception() {
+    var cx = mouseX, cy = mouseY;
+    var R = SENSE_RADIUS;
+
+    // 盲道
+    for (var i = 0; i < tactileNodes.length; i++) {
+      var n = tactileNodes[i];
+      var dx = cx - n.x;
+      var dy = cy - n.y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      var target = d < R ? (1 - d / R) * 0.9 : 0;
+
+      if (target > n.alpha) {
+        n.alpha = lerp(n.alpha, target, 0.25);
+      } else {
+        n.alpha *= 0.995; // 缓慢遗忘
+      }
+    }
+
+    // 障碍物
+    for (var j = 0; j < obstacles.length; j++) {
+      var o = obstacles[j];
+      var ox = cx - o.x;
+      var oy = cy - o.y;
+      var od = Math.sqrt(ox * ox + oy * oy);
+      var otarget = od < R * 1.4 ? (1 - od / (R * 1.4)) : 0;
+
+      if (otarget > o.alpha) {
+        o.alpha = lerp(o.alpha, otarget, 0.18);
+      } else {
+        o.alpha *= 0.996;
+      }
+
+      // 首次感知音效
+      if (!o.discovered && o.alpha > 0.35) {
+        o.discovered = true;
+        playClick(300 + Math.random() * 100, 0.028, 0.16);
+      }
+    }
+  }
+
+  // ========== 主渲染 ==========
+  function render(ts) {
+    if (!startTime) startTime = ts;
+    var elapsed = ts - startTime;
+    var t = clamp(elapsed / DURATION, 0, 1);
+
+    // 清屏
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+
+    // 感知更新
+    updatePerception();
+
+    // 揭晓进度
+    var revealT = clamp((t - REVEAL_START) / REVEAL_DUR, 0, 1);
+    var revealAlpha = smoothstep(revealT);
+
+    // ---- 感知光晕 ----
+    if (!finished) {
+      var pulse = 0.5 + 0.5 * Math.sin(elapsed / 400);
+      var glow = ctx.createRadialGradient(
+        mouseX, mouseY, 0,
+        mouseX, mouseY, SENSE_RADIUS
+      );
+      glow.addColorStop(0, 'rgba(245,200,66,' + (0.035 + pulse * 0.012) + ')');
+      glow.addColorStop(0.5, 'rgba(245,200,66,0.012)');
+      glow.addColorStop(1, 'rgba(245,200,66,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // ---- 盲道 ----
+    for (var i = 0; i < tactileNodes.length; i++) {
+      var n = tactileNodes[i];
+      var a = Math.max(n.alpha, revealAlpha * 0.8);
+      if (a < 0.015) continue;
+
+      ctx.globalAlpha = a * 0.85;
+      ctx.fillStyle = '#e6b93a';
+
+      // 每个节点画三个点，模拟盲道砖凸起
+      var sz = 1.8;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, sz, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (i < tactileNodes.length - 1) {
+        var next = tactileNodes[i + 1];
+        var ddx = next.x - n.x;
+        var ddy = next.y - n.y;
+        var len = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+        var px = -ddy / len;
+        var py = ddx / len;
+        var off = 6;
+
+        ctx.beginPath();
+        ctx.arc(n.x + px * off, n.y + py * off, sz, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(n.x - px * off, n.y - py * off, sz, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ---- 障碍物 ----
+    for (var k = 0; k < obstacles.length; k++) {
+      var o = obstacles[k];
+      var oa = Math.max(o.alpha, revealAlpha);
+      if (oa < 0.01) continue;
+
+      if (o.type === 'tree') drawTree(o.x, o.y, o.scale, oa);
+      else if (o.type === 'pole') drawPole(o.x, o.y, o.scale, oa);
+      else if (o.type === 'bike') drawBike(o.x, o.y, o.scale, oa, o.rotate || 0);
+      else if (o.type === 'car') drawCar(o.x, o.y, o.scale, oa);
+    }
+
+    // ---- 手杖感知点 ----
+    if (!finished) {
+      var p2 = 0.5 + 0.5 * Math.sin(elapsed / 300);
+
+      ctx.globalAlpha = 0.35 + p2 * 0.2;
+      ctx.fillStyle = '#f5c842';
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.1 + p2 * 0.05;
+      ctx.strokeStyle = '#f5c842';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(mouseX, mouseY, 12 + p2 * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // ---- 结束 ----
+    if (t >= 1 && !finished) {
+      finished = true;
+      showEnding();
+    }
+
+    if (t < 1) requestAnimationFrame(render);
+  }
+
+  // ========== 结束画面 ==========
+  function showEnding() {
+    endingTextEl.innerText =
+      '你走了 20 秒。\n' +
+      '黑暗中，你只能靠一根手杖\n' +
+      '一点点摸索出这个世界。\n\n' +
+      '而这是他们每天要走的路。';
+
+    setTimeout(function() {
+      endingEl.classList.add('show');
+      playClick(392, 0.035, 0.8);
+      setTimeout(function() { playClick(523, 0.025, 0.9); }, 300);
+    }, 400);
+  }
+
+  // ========== 事件 ==========
+  function onMove(x, y) {
+    mouseX = x;
+    mouseY = y;
+    if (!started) {
+      started = true;
+      initAudio();
+      hintEl.style.opacity = '0';
+    }
+  }
+
+  document.addEventListener('mousemove', function(e) {
+    onMove(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches.length > 0) {
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  }, { passive: false });
+
+  window.addEventListener('resize', resize);
+
+  // ========== 启动 ==========
+  resize();
+  requestAnimationFrame(render);
+
+  // 5 秒后自动隐藏提示
+  setTimeout(function() { hintEl.style.opacity = '0'; }, 5000);
+
+})();
+</script>
+</body>
+</html>
